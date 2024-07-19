@@ -37,6 +37,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/kubescape/go-logger"
+	"github.com/kubescape/go-logger/helpers"
 )
 
 // Response is the cached response data structure.
@@ -86,6 +89,7 @@ type Adapter interface {
 
 // Middleware is the HTTP cache middleware handler.
 func (c *Client) Middleware(next http.Handler) http.Handler {
+	logger.L().Debug("creating cache middleware")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if c.cacheableMethod(r.Method) {
 			sortURLParams(r.URL)
@@ -115,6 +119,9 @@ func (c *Client) Middleware(next http.Handler) http.Handler {
 				response := BytesToResponse(b)
 				if ok {
 					if response.Expiration.After(time.Now()) {
+						logger.L().Debug("cache hit",
+							helpers.String("url", r.URL.String()),
+							helpers.Int("size", len(b)))
 						response.LastAccess = time.Now()
 						response.Frequency++
 						c.adapter.Set(key, response.Bytes(), response.Expiration)
